@@ -1,0 +1,68 @@
+name: Build Android APK
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Inject Configuration
+        run: |
+          echo '{ "appId": "com.legalcheck.ai", "appName": "LegalCheck AI", "webDir": "dist" }' > capacitor.config.json
+
+      - name: Build web application
+        run: npm run build
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build Android APK
+        run: |
+          npx cap add android || true
+          npx cap sync android
+          
+          # KLUCZOWE POPRAWKI KONFIGURACJI GRADLE:
+          # 1. Wymuszenie wersji Kotlina w głównym pliku projektu
+          sed -i 's/kotlin_version = .*/kotlin_version = "1.8.20"/' android/build.gradle
+          
+          # 2. Dodanie strategii rozwiązywania konfliktów bezpośrednio do app/build.gradle
+          echo "android {
+              configurations.all {
+                  resolutionStrategy {
+                      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.20'
+                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.20'
+                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.20'
+                  }
+              }
+          }" >> android/app/build.gradle
+          
+          chmod +x android/gradlew
+          cd android && ./gradlew clean assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: legalcheck-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Generate and Log SHA-1 Fingerprint
+        run: |
+          echo "--- TWOJE SHA-1 DLA FIREBASE ---"
+          keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android | grep SHA1 || echo "Klucz dostępny po pomyślnym bui ldzie"
