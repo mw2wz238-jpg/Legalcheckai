@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and subscription status",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "stripeCustomerId": { "type": "string" },
+        "subscriptionStatus": { 
+          "type": "string",
+          "enum": ["none", "active", "canceled"]
+        },
+        "isPro": { "type": "boolean" },
+        "dailyAnalysesCount": { "type": "number" },
+        "lastAnalysisDate": { "type": "string", "format": "date-time" },
+        "paymentCompletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "avatar"]
+    },
+    "AnalysisHistory": {
+      "title": "Analysis history",
+      "description": "Historical legal document analyses",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" },
+        "sourceText": { "type": "string" },
+        "hasRedFlags": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "AnalysisHistory",
+      "description": "User's analysis history"
+    }
+  }
+}
